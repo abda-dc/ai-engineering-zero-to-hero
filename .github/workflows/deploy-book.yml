@@ -34,9 +34,11 @@ jobs:
           node-version: '22'
 
       - name: Build MyST / Jupyter Book 2 Site
+        env:
+          BASE_URL: /ai-engineering-zero-to-hero
         run: |
           cd book
-          npx --yes mystmd build --site
+          npx --yes mystmd build --html
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
@@ -44,7 +46,7 @@ jobs:
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'book/_build/site'
+          path: 'book/_build/html'
 
       - name: Deploy to GitHub Pages
         id: deployment
