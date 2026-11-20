@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, BookOpen, Layers, Terminal, Github, CheckCircle2, GraduationCap } from 'lucide-react';
+import { Sparkles, BookOpen, Layers, Terminal, Github, CheckCircle2, GraduationCap, Presentation } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -26,6 +26,7 @@ export default function Navbar() {
     { name: 'Mastery Dashboard', href: '/', icon: Layers },
     { name: 'Chapters', href: '/chapters/ch00', icon: BookOpen },
     { name: 'AI Engineering Studio', href: '/studio', icon: Terminal },
+    { name: 'Slides', href: '/slides', icon: Presentation },
     { name: 'Cohort & Syllabus', href: '/enroll', icon: GraduationCap },
   ];
 

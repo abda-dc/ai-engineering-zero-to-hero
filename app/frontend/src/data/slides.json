@@ -1,0 +1,1662 @@
+{
+  "course_title": "AI Engineering: Zero to Hero \u2014 16-Week Slide Decks",
+  "total_weeks": 16,
+  "decks": [
+    {
+      "id": "week-01",
+      "week_number": 1,
+      "title": "Week 01: The Builder's Launchpad",
+      "filename": "week-01-builder-launchpad.md",
+      "html_path": "/slides-html/week-01-builder-launchpad.html",
+      "slide_count": 10,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 01: The Builder's Launchpad",
+          "markdown": "## Week 01: The Builder's Launchpad\n### Python OOP, REST APIs, Git Hygiene & Local Ollama\n\n### Learning Objectives:\n1. Master Object-Oriented modeling for AI components (Pipelines, Embedders, LLM Clients).\n2. Build non-blocking asynchronous REST APIs with **FastAPI**.\n3. Establish Git trunk-based branch hygiene & semantic commit standards.\n4. Set up local zero-cost LLM inference via **Ollama** (`llama3.2:3b`, `qwen2.5:7b`).\n\n> *\"An AI Engineer is first and foremost a rigorous software engineer who treats model calls as unreliable network RPCs.\"*",
+          "notes": "Welcome students to Week 1. Emphasize software craftsmanship and setting up local-first tooling.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "Architecture: The Modern AI Engineering Stack",
+          "markdown": "## Architecture: The Modern AI Engineering Stack\n### Local-First Development & Deployment Topology\n\n```\n+-------------------------------------------------------------+\n|                    Client UI Layer                          |\n|           (Next.js App Router / Desktop Agent)              |\n+-----------------------------+-------------------------------+\n                              | JSON-RPC / SSE Stream\n+-----------------------------v-------------------------------+\n|               FastAPI Application Gateway                   |\n|        (Pydantic Validation, Rate Limiter, Cache)           |\n+--------------+------------------------------+---------------+\n               |                              |\n+--------------v--------------+ +-------------v---------------+\n|    Local Ollama Inference   | |    Embedded State Layer     |\n| (llama3.2:3b / qwen2.5:7b)  | |  (SQLite Progress & Vector) |\n+-----------------------------+ +-----------------------------+\n```",
+          "notes": "Walk through each tier. Point out that the architecture works completely offline without cloud API keys.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "OOP System Modeling for AI Components",
+          "markdown": "## OOP System Modeling for AI Components\n### Abstracting Volatile Foundation Models\n\n### Why Polymorphic Interfaces Matter:\n- Wrap external model providers behind a uniform contract.\n- Decouple prompt formulation from execution runtime.\n\n```python\nfrom abc import ABC, abstractmethod\n\nclass BaseLLMClient(ABC):\n    @abstractmethod\n    async def generate(self, prompt: str, **kwargs) -> str:\n        \"\"\"Generate text completion.\"\"\"\n        pass\n```\n- Swap between Ollama, vLLM, and Claude with **zero downstream code changes**.",
+          "notes": "Explain how hardcoding vendor SDKs creates technical debt. BaseLLMClient allows seamless mocking and switching.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Asynchronous REST with FastAPI",
+          "markdown": "## Asynchronous REST with FastAPI\n### Non-Blocking I/O for High-Latency LLMs\n\n### Concurrency Under High-Latency Calls:\n- LLM generations take 500ms to 5000ms.\n- Synchronous worker threads deplete rapidly under modest loads.\n- `async / await` frees the Python event loop during network socket I/O.\n\n```python\n@app.post('/api/generate')\nasync def generate_response(req: PromptRequest):\n    # Non-blocking async HTTP call to local Ollama daemon\n    response = await ollama_client.generate(req.prompt)\n    return {'status': 'success', 'data': response}\n```",
+          "notes": "Explain the difference between CPU-bound and I/O-bound workloads in Python. LLM calls are almost entirely I/O-bound.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Local Zero-Cost Inference with Ollama",
+          "markdown": "## Local Zero-Cost Inference with Ollama\n### Running 3B and 7B Models on Everyday Laptops\n\n### Why Local Models in 2026?\n- **Zero API Bill:** Run 10,000 automated unit tests without paying OpenAI/Anthropic.\n- **Absolute Privacy:** Sensitive code and customer data never leave `localhost`.\n\n```bash\n# Pull required course models\nollama pull llama3.2:3b    # Fast 3B model (2.0 GB VRAM)\nollama pull qwen2.5:7b     # High-reasoning 7B model (4.7 GB VRAM)\n\n# Test HTTP inference directly\ncurl -s http://localhost:11434/api/generate -d '{\n  \"model\": \"llama3.2:3b\",\n  \"prompt\": \"What is AI engineering in 10 words?\",\n  \"stream\": false\n}'\n```",
+          "notes": "Show the terminal commands. Highlight that llama3.2:3b runs at over 40 tokens/sec on standard M-series Macs or NVIDIA RTX GPUs.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Annotated Code: Streaming Ollama Client",
+          "markdown": "## Annotated Code: Streaming Ollama Client\n### Processing Tokens in Real Time\n\n```python\nimport httpx\nimport json\nfrom typing import AsyncGenerator\n\nclass LocalOllamaClient:\n    def __init__(self, base_url: str = 'http://localhost:11434'):\n        self.base_url = base_url\n\n    async def stream(self, prompt: str, model: str = 'llama3.2:3b') -> AsyncGenerator[str, None]:\n        async with httpx.AsyncClient(timeout=30.0) as client:\n            async with client.stream(\n                'POST',\n                f'{self.base_url}/api/generate',\n                json={'model': model, 'prompt': prompt, 'stream': True}\n            ) as resp:\n                async for line in resp.aiter_lines():\n                    if line:\n                        chunk = json.loads(line)\n                        yield chunk.get('response', '')\n```",
+          "notes": "Explain line-by-line streaming. Explain that aiter_lines() allows piping tokens directly into FastAPI's StreamingResponse.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Live Demo Cue: Studio & Environment",
+          "markdown": "## Live Demo Cue: Studio & Environment\n### Instructor Live Walkthrough Steps\n\n### Instructor Live Execution:\n1. Verify local backend: `curl.exe http://127.0.0.1:8000/api/health`\n2. Verify local Ollama: `curl.exe http://localhost:11434/api/tags`\n3. Open `http://localhost:3000` to show the Mastery Dashboard.\n4. Walk through Chapter 00 in the Interactive Reader (`/chapters/ch00`).\n5. Open `http://localhost:3000/studio` to preview live tabs.\n6. Show Google Colab one-click launch badge.",
+          "notes": "Switch to browser and terminal to demonstrate these live steps. Encourage students to follow along on their machines.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 8,
+          "title": "Common Pitfalls & Failure Modes",
+          "markdown": "## Common Pitfalls & Failure Modes\n### What Breaks in Production Systems\n\n### Top 3 Week 1 Traps:\n1. **Unbounded Input Length:** Users submitting 500kb prompts causing out-of-memory crashes on small models.\n   - *Fix:* Enforce Pydantic `Field(..., max_length=2000)`.\n2. **Synchronous Requests in Async Routes:** Calling `requests.post()` inside `async def` blocks the entire server event loop.\n   - *Fix:* Always use `httpx.AsyncClient`.\n3. **Unquoted Windows Paths with Spaces:** Path errors in PowerShell.\n   - *Fix:* Always quote `\"C:\\Users\\...\\ai-engineering-zero to hero\"`.",
+          "notes": "Warn students about GIL locking when mixing sync HTTP libraries inside async routes.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Weekly Deliverable: The Builder Launchpad",
+          "markdown": "## Weekly Deliverable: The Builder Launchpad\n### Capstone Milestone 01\n\n### Deliverable Requirements:\n- Complete `book/chapters/part1-foundations/ch00-builder-launchpad.ipynb`.\n- Implement a verified FastAPI microservice with:\n  1. `GET /api/health` checking database and Ollama availability.\n  2. `POST /api/llm/chat` with Pydantic validation and local model routing.\n  3. Passing test suite with `pytest`.\n- Push code to your branch `feat/w01-launchpad`.",
+          "notes": "Reiterate definition of done: notebook runs top-to-bottom with zero errors and pytest passes.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 10,
+          "title": "Week 01 Check-Out Quiz",
+          "markdown": "## Week 01 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **Why must LLM endpoints use asynchronous I/O in FastAPI?**\n   - *Answer:* LLM calls are I/O-bound with high latency. Async avoids thread-pool exhaustion.\n2. **What does Ollama's `stream: false` parameter do?**\n   - *Answer:* Blocks until the complete response is generated and returns one aggregated JSON payload.\n3. **Why do we separate model client logic from API routing logic?**\n   - *Answer:* Modularity, ease of unit testing via mocks, and zero vendor lock-in.",
+          "notes": "Quiz students interactively before closing the session.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-02",
+      "week_number": 2,
+      "title": "Week 02: Math & High-Dimensional Geometry",
+      "filename": "week-02-math-and-high-dim-geometry.md",
+      "html_path": "/slides-html/week-02-math-and-high-dim-geometry.html",
+      "slide_count": 11,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 02: Math & High-Dimensional Geometry",
+          "markdown": "## Week 02: Math & High-Dimensional Geometry\n### Vectors, Cosine Similarity, Gradients & Bayes Theorem\n\n### Learning Objectives:\n1. Geometric intuition of high-dimensional embedding spaces ($\\mathbb{R}^d$).\n2. Mathematical formulation: Dot Product vs. Cosine Similarity vs. L2 Distance.\n3. The Curse of Dimensionality in vector search.\n4. Gradient Descent optimization and Bayesian inference principles.\n\n> *\"If you don't understand high-dimensional geometry, vector databases will always feel like black magic.\"*",
+          "notes": "Frame this week around intuition over dry derivations. Vector math is the physical law of modern AI.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "Mental Model: High-Dimensional Embeddings",
+          "markdown": "## Mental Model: High-Dimensional Embeddings\n### Direction Encodes Semantic Meaning\n\n```\n              Dimension 2 (e.g. \"Royalty\")\n              ^\n              |         [King] *          * [Queen]\n              |                   \\        /\n              |                    \\      /\n              |        [Man] *      \\    /    * [Woman]\n              +----------------------\\--/------------> Dimension 1 (e.g. \"Gender\")\n                                      \\/\n                   Vector offset: (King - Man + Woman \u2248 Queen)\n```\n- Distance represents dissimilarity.\n- Angle represents semantic orientation.",
+          "notes": "Point out that semantic vector spaces possess arithmetic properties discovered by Mikolov in 2013.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Dot Product vs. Cosine Distance",
+          "markdown": "## Dot Product vs. Cosine Distance\n### Formulas & Production Tradeoffs\n\n### Dot Product:\n$$\\mathbf{u} \\cdot \\mathbf{v} = \\sum_{i=1}^d u_i v_i = \\|\\mathbf{u}\\| \\|\\mathbf{v}\\| \\cos \\theta$$\n- Measures both **alignment and magnitude** (longer text has larger magnitude).\n\n### Cosine Similarity:\n$$\\text{Cosine}(\\mathbf{u}, \\mathbf{v}) = \\frac{\\mathbf{u} \\cdot \\mathbf{v}}{\\|\\mathbf{u}\\| \\|\\mathbf{v}\\|} = \\cos \\theta \\in [-1, 1]$$\n- Purely directional; invariant to document length.\n- *Pro Tip:* If vectors are unit-normalized ($\\left\\|\\mathbf{v}\\right\\| = 1$), dot product **equals** cosine similarity!",
+          "notes": "Emphasize the performance win: pre-normalizing vectors turns cosine calculation into a pure dot product (saving square roots).",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "The Curse of Dimensionality",
+          "markdown": "## The Curse of Dimensionality\n### Why High-D Spaces Defy Intuition\n\n### Counter-Intuitive Properties of $\\mathbb{R}^{1536}$:\n1. **Distance Concentration:** As $d \\to \\infty$, the distance between the nearest and farthest vector converges to the average distance.\n2. **Empty Volume:** 99.99% of the volume of a high-dimensional hypersphere resides in an infinitesimally thin outer shell.\n3. **Brute-Force Search Collapses:** Scanning 10M vectors linearly ($O(N \\cdot d)$) creates massive latency spikes.\n- *Solution:* Approximate Nearest Neighbor (ANN) indexing (HNSW, IVF).",
+          "notes": "Explain why vector databases exist: standard B-trees cannot index multi-dimensional vectors.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Gradients & Loss Optimization",
+          "markdown": "## Gradients & Loss Optimization\n### How Models Update Parameters\n\n### The Optimization Equation:\n$$\\mathbf{w}_{t+1} = \\mathbf{w}_t - \\eta \\nabla L(\\mathbf{w}_t)$$\n- $\\nabla L$: Gradient vector of partial derivatives pointing uphill.\n- $\\eta$: Learning rate scaling step size.\n- *Intuition:* A ball rolling downhill along the surface of minimum error.",
+          "notes": "Connect gradient descent to fine-tuning (LoRA in Week 5). You don't derive Jacobians by hand, but you monitor loss curves.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Bayes' Theorem in Search & Retrieval",
+          "markdown": "## Bayes' Theorem in Search & Retrieval\n### Updating Probabilities with New Evidence\n\n$$P(Relevant \\mid Query) = \\frac{P(Query \\mid Relevant) \\cdot P(Relevant)}{P(Query)}$$\n\n### Application in Hybrid RAG:\n- **Prior $P(Relevant)$:** Base popularity or authority of a document.\n- **Likelihood $P(Query \\mid Relevant)$:** Match frequency of query keywords.\n- **Posterior:** Final reranked confidence score.",
+          "notes": "Show how Bayesian probability underpins BM25 and cross-encoder rerankers.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Annotated Code: Vector Math from Scratch",
+          "markdown": "## Annotated Code: Vector Math from Scratch\n### Pure NumPy Implementation\n\n```python\nimport numpy as np\n\ndef cosine_similarity(u: np.ndarray, v: np.ndarray) -> float:\n    \"\"\"Numerically stable cosine similarity.\"\"\"\n    norm_u = np.linalg.norm(u)\n    norm_v = np.linalg.norm(v)\n    if norm_u == 0.0 or norm_v == 0.0:\n        return 0.0\n    return float(np.dot(u, v) / (norm_u * norm_v))\n\ndef unit_normalize_rows(matrix: np.ndarray) -> np.ndarray:\n    \"\"\"Normalize embedding matrix for rapid dot-product search.\"\"\"\n    norms = np.linalg.norm(matrix, axis=1, keepdims=True)\n    norms[norms == 0.0] = 1.0\n    return matrix / norms\n```",
+          "notes": "Walk through zero-norm handling. Show how keepdims=True enables vectorized matrix operations.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Live Demo Cue: Vector Projection Studio",
+          "markdown": "## Live Demo Cue: Vector Projection Studio\n### Hands-on Studio Walkthrough\n\n### Instructor Demo Steps:\n1. Open `http://localhost:3000/studio` -> **Tab 1: Tokenizer & Embedding Explorer**.\n2. Enter pairs of synonymous vs. antonymous sentences.\n3. Inspect the 2D projection scatter plot.\n4. Demonstrate how changing a single keyword rotates the embedding vector in geometric space.",
+          "notes": "Demonstrate live in browser. Show the cosine matrix heatmap updating in real time.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 9,
+          "title": "Common Pitfalls & Numerical Bugs",
+          "markdown": "## Common Pitfalls & Numerical Bugs\n### Production Bugs in Vector Math\n\n1. **NaN Infiltration:** Un-clamped division by zero spreads `NaN` across entire index batches.\n2. **Mixing Normalized and Un-Normalized Vectors:** Yields distorted search rankings.\n3. **Mismatched Dimensionality:** Querying a 768-dim index with a 1536-dim embedding model causes runtime dimensional mismatch crashes.",
+          "notes": "Stress that embedding models cannot be swapped without rebuilding the entire vector index.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 10,
+          "title": "Weekly Deliverable: Math & Vectors",
+          "markdown": "## Weekly Deliverable: Math & Vectors\n### Capstone Milestone 02\n\n### Deliverable Requirements:\n- Complete `book/chapters/part1-foundations/ch01-math-and-stats-intuition.ipynb`.\n- Implement:\n  1. Vector distance metrics (Cosine, Euclidean, Manhattan).\n  2. Pairwise similarity matrix generator.\n  3. Simple 1D gradient descent simulator.\n- Verify with `python scripts/verify_notebooks.py`.",
+          "notes": "Check that students verify both unit tests and notebook cells.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Week 02 Check-Out Quiz",
+          "markdown": "## Week 02 Check-Out Quiz\n### Review & Consolidation\n\n1. **What is the cosine similarity of orthogonal vectors?**\n   - *Answer:* `0.0` (90-degree angle).\n2. **Why does unit-normalizing vectors speed up search?**\n   - *Answer:* Eliminates runtime norm calculations; similarity equals a simple dot product.\n3. **What is the range of cosine distance ($1 - \\text{similarity}$)?**\n   - *Answer:* $[0.0, 2.0]$.",
+          "notes": "Recap key takeaways and set expectations for Week 3.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-03",
+      "week_number": 3,
+      "title": "Week 03: The Classical Machine Learning Bridge",
+      "filename": "week-03-classical-ml-bridge.md",
+      "html_path": "/slides-html/week-03-classical-ml-bridge.html",
+      "slide_count": 11,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 03: The Classical Machine Learning Bridge",
+          "markdown": "## Week 03: The Classical Machine Learning Bridge\n### Loss Curves, Overfitting, Regularization & Cross-Validation\n\n### Learning Objectives:\n1. Understand Supervised vs. Unsupervised paradigms in the age of LLMs.\n2. Diagnose model health via **Loss Curves** (Underfitting vs. Overfitting).\n3. Apply **L1 (Lasso)** and **L2 (Ridge)** regularization principles.\n4. Establish rigorous **k-Fold Cross-Validation** to prevent data leakage.\n\n> *\"Before generating tokens, an AI engineer must know whether a simple logistic regression or decision tree solves the business problem with 100x lower latency.\"*",
+          "notes": "Position classical ML as a vital baseline. Not every problem needs an LLM.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "Mental Model: The Bias-Variance Tradeoff",
+          "markdown": "## Mental Model: The Bias-Variance Tradeoff\n### Generalization vs. Memorization\n\n```\nHigh Loss ^\n          |      \\  Validation Loss (High Variance / Overfitting)\n          |       \\       /\n          |        \\_____/\n          |         \\   /\n          |          \\ /  Training Loss (Memorization)\n          |           v__________________\n          +-----------------------------------> Model Complexity / Epochs\n              Underfitting         Sweet Spot          Overfitting\n```\n- **Underfitting (High Bias):** Model too simple to capture patterns.\n- **Overfitting (High Variance):** Model memorizes training noise.",
+          "notes": "Explain how this curve applies to LLM fine-tuning and classical ML alike.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Loss Curves Diagnostics",
+          "markdown": "## Loss Curves Diagnostics\n### Reading Training Dynamics Like an EKG\n\n### Common Scenarios:\n- **Scenario A:** Both train and val loss stay high $\\to$ Learning rate too low or model capacity insufficient.\n- **Scenario B:** Train loss drops to 0, val loss explodes $\\to$ Severe overfitting. Add dropout / weight decay.\n- **Scenario C:** Loss oscillates erratically $\\to$ Learning rate too high (stepping over minima).\n- **Scenario D:** Train and val decrease together $\\to$ Healthy convergence.",
+          "notes": "Train students to diagnose training runs before spending hours on compute.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Regularization: Taming Complexity",
+          "markdown": "## Regularization: Taming Complexity\n### L1 (Lasso) vs. L2 (Ridge) vs. Dropout\n\n### Formulations:\n- **L1 Regularization (Lasso):**\n  $$L_{reg} = L_0 + \\lambda \\sum |w_i|$$\n  *Property:* Drives uninformative weights to **exact zero** (feature selection).\n- **L2 Regularization (Ridge / Weight Decay):**\n  $$L_{reg} = L_0 + \\lambda \\sum w_i^2$$\n  *Property:* Shrinks weights smoothly; prevents single dominant features.\n- **Dropout:** Randomly deactivates neurons during forward pass to force redundant representations.",
+          "notes": "Connect L2 regularization to weight decay in AdamW (the default optimizer for Transformers).",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Cross-Validation & Data Leakage",
+          "markdown": "## Cross-Validation & Data Leakage\n### Preventing Metric Hallucinations\n\n```\nDataset [====================================================]\n\nFold 1:  [ Val  ] [ Train ] [ Train ] [ Train ] [ Train ]\nFold 2:  [ Train ] [ Val  ] [ Train ] [ Train ] [ Train ]\nFold 3:  [ Train ] [ Train ] [ Val  ] [ Train ] [ Train ]\nFold 4:  [ Train ] [ Train ] [ Train ] [ Val  ] [ Train ]\nFold 5:  [ Train ] [ Train ] [ Train ] [ Train ] [ Val  ]\n```\n### The Cardinal Sin: Data Leakage\n- Normalizing or imputing data **before** splitting folds leaks test distributions into training.",
+          "notes": "Stress that evaluating on leaked test data gives false confidence before production deployment.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Classical Baselines for AI Systems",
+          "markdown": "## Classical Baselines for AI Systems\n### When NOT to Use an LLM\n\n| Feature | Classical ML (scikit-learn) | Large Language Model |\n| :--- | :--- | :--- |\n| **Latency** | 1 - 5 ms | 500 - 3000 ms |\n| **Cost per 1M calls**| \\$0.01 (CPU server) | \\$5.00 - \\$30.00 |\n| **Determinism** | 100% deterministic | Probabilistic |\n| **Training Data** | Requires labeled tables | Zero/Few-shot |\n| **Use Cases** | Fraud score, churn, intent routing | Summaries, code, reasoning |",
+          "notes": "Teach students to use cheap classifiers as first-stage routers in AI pipelines.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Annotated Code: scikit-learn Pipeline",
+          "markdown": "## Annotated Code: scikit-learn Pipeline\n### Robust Leak-Free Modeling\n\n```python\nfrom sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import cross_val_score\n\n# Construct pipeline ensuring transformation occurs inside cross-validation\npipeline = Pipeline([\n    ('scaler', StandardScaler()),\n    ('classifier', LogisticRegression(C=1.0, penalty='l2'))\n])\n\nscores = cross_val_score(pipeline, X_train, y_train, cv=5, scoring='f1_macro')\nprint(f'Mean CV F1 Score: {scores.mean():.4f} (+/- {scores.std():.4f})')\n```",
+          "notes": "Explain why Pipeline prevents leakage: scaling parameters fit ONLY on training folds.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Live Demo Cue: Overfitting in Action",
+          "markdown": "## Live Demo Cue: Overfitting in Action\n### Interactive Colab Walkthrough\n\n### Instructor Live Demo Steps:\n1. Open `book/chapters/part1-foundations/ch02-classical-ml-bridge.ipynb`.\n2. Fit a high-degree polynomial regressor ($degree = 15$) on 20 noisy data points.\n3. Show the wild oscillation between data points (overfitting).\n4. Apply L2 Ridge penalty and show the curve smoothly regularizing.",
+          "notes": "Demonstrate how easy it is to overfit small datasets.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 9,
+          "title": "Common Pitfalls & Production Bugs",
+          "markdown": "## Common Pitfalls & Production Bugs\n### Classical ML Traps\n\n1. **Evaluating on Training Data:** Reporting 99.8% training accuracy to stakeholders.\n2. **Ignoring Class Imbalance:** Accuracy is misleading when 99% of samples belong to the majority class.\n3. **Feature Store Drift:** Training features computed differently from real-time production features.",
+          "notes": "Remind students: accuracy on unbalanced fraud data is a dangerous vanity metric.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 10,
+          "title": "Weekly Deliverable: Classical ML Bridge",
+          "markdown": "## Weekly Deliverable: Classical ML Bridge\n### Capstone Milestone 03\n\n### Deliverable Requirements:\n- Complete `ch02-classical-ml-bridge.ipynb`.\n- Implement:\n  1. Train/Val/Test split with stratification.\n  2. Cross-validated baseline classifier.\n  3. Loss curve plotting function comparing unregularized vs. regularized models.\n- Push verified code to your branch `feat/w03-classical-ml`.",
+          "notes": "Encourage students to inspect feature importances.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Week 03 Check-Out Quiz",
+          "markdown": "## Week 03 Check-Out Quiz\n### Review & Consolidation\n\n1. **What does a diverging validation loss indicate while training loss decreases?**\n   - *Answer:* Overfitting.\n2. **Why does L1 regularization create sparse weights?**\n   - *Answer:* The diamond constraint surface touches loss contours at axes where weights are zero.\n3. **Why should data scaling occur inside the cross-validation loop?**\n   - *Answer:* To prevent test set distribution metrics from leaking into the training step.",
+          "notes": "Conclude Part I: Foundations. Preview Part II: Core Generative AI.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-04",
+      "week_number": 4,
+      "title": "Week 04: Generative AI Foundations",
+      "filename": "week-04-generative-ai-foundations.md",
+      "html_path": "/slides-html/week-04-generative-ai-foundations.html",
+      "slide_count": 11,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 04: Generative AI Foundations",
+          "markdown": "## Week 04: Generative AI Foundations\n### GenAI vs. Discriminative, Self-Attention & RLHF\n\n### Learning Objectives:\n1. Contrast Generative ($P(X, Y)$) vs. Discriminative ($P(Y \\mid X)$) models.\n2. Deconstruct the **Transformer Architecture** and the **Self-Attention Mechanism**.\n3. Understand Pre-training vs. Supervised Fine-Tuning (SFT) vs. RLHF.\n4. Explore Multimodal foundation models and AI safety alignment.\n\n> *\"Attention is not just an algorithm; it is dynamic content-based routing across a vector space.\"*",
+          "notes": "Welcome students to Part II. Today we dive into the core engine of modern LLMs.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "Mental Model: The Self-Attention Mechanism",
+          "markdown": "## Mental Model: The Self-Attention Mechanism\n### Queries, Keys, and Values\n\n```\nQuery (What I'm looking for)  Key (What I contain)  Value (What I communicate)\n         Q                          K                          V\n         |                          |                          |\n         +------------x-------------+                          |\n                      | (Dot Product)                          |\n                      v                                        |\n               Raw Attention Scores                            |\n                      | (Scale by sqrt(d_k) & Softmax)         |\n                      v                                        |\n               Attention Weights [0, 1]                        |\n                      |                                        |\n                      +-------------------x--------------------+\n                                          |\n                                          v\n                                Contextual Output Vector\n```",
+          "notes": "Walk through the filing cabinet analogy: Query is your search term, Key is the folder label, Value is the folder content.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "The Mathematical Equation of Attention",
+          "markdown": "## The Mathematical Equation of Attention\n### Scaled Dot-Product Attention\n\n$$\\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{Q K^T}{\\sqrt{d_k}}\\right) V$$\n\n### Why the $\\sqrt{d_k}$ Scaling Factor?\n- When dimensionality $d_k$ is large, dot products grow large in magnitude.\n- Large values push the softmax function into regions with near-zero gradients (saturation).\n- Dividing by $\\sqrt{d_k}$ stabilizes numerical gradients during backpropagation.",
+          "notes": "Ask students what happens when softmax saturates: gradients vanish and learning halts.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Multi-Head Attention (MHA)",
+          "markdown": "## Multi-Head Attention (MHA)\n### Attending to Multiple Subspaces in Parallel\n\n### Why Multiple Heads?\n- A single attention head only tracks one type of relationship (e.g. subject-verb agreement).\n- **Multi-Head Attention** projects Q, K, V into $h$ distinct representation subspaces:\n$$\\text{MHA}(Q, K, V) = \\text{Concat}(\\text{head}_1, \\dots, \\text{head}_h) W^O$$\n- Head 1 might track syntax, Head 2 tracks coreference ('it' $\\to$ 'robot'), Head 3 tracks semantics.",
+          "notes": "Show how parallel heads give the network rich expressive capacity across different linguistic dimensions.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "The LLM Training Lifecycle",
+          "markdown": "## The LLM Training Lifecycle\n### From Raw Text to Helpful Assistant\n\n```\n1. Pre-training (99% of compute)\n   Raw Internet Text -> Base Model (Next-token prediction: \"The capital is...\")\n\n2. Supervised Fine-Tuning / SFT (1% of compute)\n   Curated QA Dialogues -> Instruction Model (\"User: Summarize this...\")\n\n3. Preference Alignment (RLHF / DPO)\n   Human / AI Feedback -> Aligned Assistant (Helpful, Honest, Harmless)\n```",
+          "notes": "Clarify the difference between a raw Base model (which continues text) and an Instruct model (which answers questions).",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Multimodal Foundations & AI Safety",
+          "markdown": "## Multimodal Foundations & AI Safety\n### Vision, Audio & Alignment Boundaries\n\n### Multimodality:\n- Project image patch tokens (Vision Transformers / ViT) into the same embedding space as text tokens.\n- Allows joint cross-attention across images and text.\n\n### Safety Guardrails:\n- Red-teaming against prompt injections and jailbreaks.\n- Toxicity classifiers and output filtering.",
+          "notes": "Preview Chapter 05 red-teaming and Chapter 12 safety audits.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Annotated Code: Scaled Dot-Product Attention",
+          "markdown": "## Annotated Code: Scaled Dot-Product Attention\n### Pure PyTorch Implementation\n\n```python\nimport torch\nimport torch.nn.functional as F\n\ndef scaled_dot_product_attention(Q, K, V, mask=None):\n    \"\"\"Compute scaled dot-product attention weights and output.\"\"\"\n    d_k = Q.size(-1)\n    scores = torch.matmul(Q, K.transpose(-2, -1)) / (d_k ** 0.5)\n    \n    if mask is not None:\n        scores = scores.masked_fill(mask == 0, -1e9)\n        \n    weights = F.softmax(scores, dim=-1)\n    output = torch.matmul(weights, V)\n    return output, weights\n```",
+          "notes": "Point out the causal mask logic: -1e9 becomes exact zero after softmax, preventing models from looking ahead.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Live Demo Cue: Studio Attention Explorer",
+          "markdown": "## Live Demo Cue: Studio Attention Explorer\n### Visualizing Token Interaction\n\n### Instructor Live Demo Steps:\n1. Open `http://localhost:3000/studio` -> **Tab 1: Tokenizer & Embedding Explorer**.\n2. Input sentence: *'The animal didn't cross the street because it was too tired.'*\n3. Inspect token split and show how *'it'* attends heavily to *'animal'*.\n4. Change to *'it was too wide'* and show how *'it'* shifts attention to *'street'*.",
+          "notes": "This Winograd schema demonstration visually proves how attention resolves pronouns contextually.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 9,
+          "title": "Common Pitfalls in Generative AI",
+          "markdown": "## Common Pitfalls in Generative AI\n### Production Realities\n\n1. **Treating LLM Output as Fact:** Hallucinations occur because models optimize next-token likelihood, not truth.\n2. **Confusing Base and Instruct Models:** Deploying a base model leads to repetitive completion loops.\n3. **Quadratic Sequence Memory:** Attention memory scales as $O(N^2)$ with sequence length $N$.",
+          "notes": "Warn students about memory explosion when scaling context length.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 10,
+          "title": "Weekly Deliverable: Generative Foundations",
+          "markdown": "## Weekly Deliverable: Generative Foundations\n### Capstone Milestone 04\n\n### Deliverable Requirements:\n- Complete `book/chapters/part2-core-genai/ch03-generative-ai-foundations.ipynb`.\n- Implement:\n  1. Multi-head self-attention module in PyTorch.\n  2. Causal masking for autoregressive decoders.\n  3. Softmax temperature experiment.\n- Push code to `feat/w04-genai-foundations`.",
+          "notes": "Encourage students to inspect intermediate attention matrices.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Week 04 Check-Out Quiz",
+          "markdown": "## Week 04 Check-Out Quiz\n### Review & Consolidation\n\n1. **Why is the dot product divided by $\\sqrt{d_k}$ in self-attention?**\n   - *Answer:* Prevents large dot products from saturating softmax gradients.\n2. **What is the difference between SFT and RLHF?**\n   - *Answer:* SFT teaches task format via demonstration; RLHF steers outputs toward human preference.\n3. **Why does causal masking use $-10^9$ before softmax?**\n   - *Answer:* $e^{-10^9} \\approx 0$, ensuring future tokens have zero attention weight.",
+          "notes": "Conclude Week 4. Next week: deep dive inside the Transformer decoder and KV cache.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-05",
+      "week_number": 5,
+      "title": "Week 05: Inside Large Language Models",
+      "filename": "week-05-inside-large-language-models.md",
+      "html_path": "/slides-html/week-05-inside-large-language-models.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 05: Inside Large Language Models",
+          "markdown": "## Week 05: Inside Large Language Models\n### BPE Tokenization, KV Cache Math, Sampling, LoRA & Quantization\n\n**Part IV: Capstone & Production** \u2022 *CH04 Companion*\n\n### Learning Objectives:\n1. BPE Tokenization Mechanics: Subwords, byte fallbacks, vocabulary sizing, and token boundary anomalies....\n2. KV Cache Mathematics & GPU Memory: Why autoregressive generation re-computes keys and values, and how KV caching tr...\n3. Sampling Strategies: Temperature, Top-k, Top-p: Controlling the probability distribution tail during autoregressive decoding....\n4. LoRA: Low-Rank Adaptation: Freezing $W_0$ and training low-rank decomposition matrices $A \\times B$ to cut ...\n\n> *\"Inside the modern LLM inference engine: KV Caching, Byte-Pair Encoding, parameter-efficient fine-tuning (LoRA), and AWQ/GGUF quantization.\"*",
+          "notes": "Welcome cohort to Week 05: Inside Large Language Models. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 05: Inside Large Language Models Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: BPE Tokenization Mechanics",
+          "markdown": "## Core Concept: BPE Tokenization Mechanics\n### BPE Tokenization, KV Cache Math, Sampling, LoRA & Quantization\n\n### Technical Breakdown:\n- Subwords, byte fallbacks, vocabulary sizing, and token boundary anomalies.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into BPE Tokenization Mechanics. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: KV Cache Mathematics & GPU Memory",
+          "markdown": "## Core Concept: KV Cache Mathematics & GPU Memory\n### BPE Tokenization, KV Cache Math, Sampling, LoRA & Quantization\n\n### Technical Breakdown:\n- Why autoregressive generation re-computes keys and values, and how KV caching trades VRAM for $O(1)$ generation speed.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into KV Cache Mathematics & GPU Memory. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Sampling Strategies: Temperature, Top-k, Top-p",
+          "markdown": "## Core Concept: Sampling Strategies: Temperature, Top-k, Top-p\n### BPE Tokenization, KV Cache Math, Sampling, LoRA & Quantization\n\n### Technical Breakdown:\n- Controlling the probability distribution tail during autoregressive decoding.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Sampling Strategies: Temperature, Top-k, Top-p. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: LoRA: Low-Rank Adaptation",
+          "markdown": "## Core Concept: LoRA: Low-Rank Adaptation\n### BPE Tokenization, KV Cache Math, Sampling, LoRA & Quantization\n\n### Technical Breakdown:\n- Freezing $W_0$ and training low-rank decomposition matrices $A \\times B$ to cut fine-tuning VRAM by 80%.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into LoRA: Low-Rank Adaptation. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Model Quantization: FP16 to INT8 and INT4",
+          "markdown": "## Core Concept: Model Quantization: FP16 to INT8 and INT4\n### BPE Tokenization, KV Cache Math, Sampling, LoRA & Quantization\n\n### Technical Breakdown:\n- GGUF and AWQ algorithms: preserving perplexity while halving memory footprint.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Model Quantization: FP16 to INT8 and INT4. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 05: Inside Large Language Models",
+          "markdown": "## Annotated Code: Week 05: Inside Large Language Models\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Tab 1: Tokenizer & Embedding Explorer \u2014 inspect BPE token boundaries and calculate KV cache size live.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Tab 1: Tokenizer & Embedding Explorer \u2014 inspect BPE token boundaries and calculate KV cache size live.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 05: Inside Large Language Models\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 05: Inside Large Language Models",
+          "markdown": "## Weekly Deliverable: Week 05: Inside Large Language Models\n### Milestone 05 Specifications\n\n### Deliverable Requirements:\n- Complete ch04-inside-large-language-models.ipynb and calculate KV cache memory for an 8k sequence on Llama 3.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w05-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 05 Check-Out Quiz",
+          "markdown": "## Week 05 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-06",
+      "week_number": 6,
+      "title": "Week 06: Prompt & Context Engineering Part A",
+      "filename": "week-06-prompt-and-context-part-a.md",
+      "html_path": "/slides-html/week-06-prompt-and-context-part-a.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 06: Prompt & Context Engineering Part A",
+          "markdown": "## Week 06: Prompt & Context Engineering Part A\n### Prompt Anatomy, System Roles, CoT, Delimiters & Pydantic JSON\n\n**Part IV: Capstone & Production** \u2022 *CH05 Companion*\n\n### Learning Objectives:\n1. Anatomy of an Enterprise System Prompt: Role framing, task constraints, output specifications, and defensive boundaries....\n2. Delimiters & Input Isolation: Using XML tags (`<context>`, `<query>`) to prevent structural confusion....\n3. Chain-of-Thought (CoT) Reasoning: Zero-shot CoT ('Think step by step') vs. Few-shot exemplars to boost reasoning a...\n4. Structured JSON Outputs via Pydantic: Enforcing strict schema contracts via JSON Schema and grammar-guided decoding....\n\n> *\"Systematic prompt engineering: anatomy of production prompts, delimiter isolation, chain-of-thought, and guaranteed Pydantic JSON schemas.\"*",
+          "notes": "Welcome cohort to Week 06: Prompt & Context Engineering Part A. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 06: Prompt & Context Engineering Part A Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Anatomy of an Enterprise System Prompt",
+          "markdown": "## Core Concept: Anatomy of an Enterprise System Prompt\n### Prompt Anatomy, System Roles, CoT, Delimiters & Pydantic JSON\n\n### Technical Breakdown:\n- Role framing, task constraints, output specifications, and defensive boundaries.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Anatomy of an Enterprise System Prompt. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: Delimiters & Input Isolation",
+          "markdown": "## Core Concept: Delimiters & Input Isolation\n### Prompt Anatomy, System Roles, CoT, Delimiters & Pydantic JSON\n\n### Technical Breakdown:\n- Using XML tags (`<context>`, `<query>`) to prevent structural confusion.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Delimiters & Input Isolation. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Chain-of-Thought (CoT) Reasoning",
+          "markdown": "## Core Concept: Chain-of-Thought (CoT) Reasoning\n### Prompt Anatomy, System Roles, CoT, Delimiters & Pydantic JSON\n\n### Technical Breakdown:\n- Zero-shot CoT ('Think step by step') vs. Few-shot exemplars to boost reasoning accuracy.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Chain-of-Thought (CoT) Reasoning. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Structured JSON Outputs via Pydantic",
+          "markdown": "## Core Concept: Structured JSON Outputs via Pydantic\n### Prompt Anatomy, System Roles, CoT, Delimiters & Pydantic JSON\n\n### Technical Breakdown:\n- Enforcing strict schema contracts via JSON Schema and grammar-guided decoding.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Structured JSON Outputs via Pydantic. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Context Window Packing & Truncation",
+          "markdown": "## Core Concept: Context Window Packing & Truncation\n### Prompt Anatomy, System Roles, CoT, Delimiters & Pydantic JSON\n\n### Technical Breakdown:\n- Strategies for handling long conversations without blowing token budgets.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Context Window Packing & Truncation. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 06: Prompt & Context Engineering Part A",
+          "markdown": "## Annotated Code: Week 06: Prompt & Context Engineering Part A\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Test prompt delimiters and schema validation live using local Ollama model in /api/llm/chat.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Test prompt delimiters and schema validation live using local Ollama model in /api/llm/chat.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 06: Prompt & Context Engineering Part A\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 06: Prompt & Context Engineering Part A",
+          "markdown": "## Weekly Deliverable: Week 06: Prompt & Context Engineering Part A\n### Milestone 06 Specifications\n\n### Deliverable Requirements:\n- Build a typed Pydantic extractor that parses unstructured customer support transcripts into JSON.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w06-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 06 Check-Out Quiz",
+          "markdown": "## Week 06 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-07",
+      "week_number": 7,
+      "title": "Week 07: Prompt & Context Engineering Part B",
+      "filename": "week-07-prompt-and-context-part-b.md",
+      "html_path": "/slides-html/week-07-prompt-and-context-part-b.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 07: Prompt & Context Engineering Part B",
+          "markdown": "## Week 07: Prompt & Context Engineering Part B\n### Prompt Chaining, ReAct Framework & Injection Red-Teaming\n\n**Part IV: Capstone & Production** \u2022 *CH05 Companion*\n\n### Learning Objectives:\n1. Prompt Chaining Architecture: Breaking monolithic prompts into discrete, validated sequential stages....\n2. The ReAct Pattern Intuition: Interleaving Thought -> Action -> Observation cycles to solve complex problems....\n3. Prompt Injections & Jailbreak Vectors: Direct injections, indirect document injections, and jailbreak payloads....\n4. Defensive Sanitization & Guardrails: Input sanitization layers, PII scrubbers, and dual-model evaluator architectures...\n\n> *\"Advanced prompt architectures: multi-step prompt chaining, ReAct (Reason + Act) tool reasoning, and defensive red-teaming against prompt injections.\"*",
+          "notes": "Welcome cohort to Week 07: Prompt & Context Engineering Part B. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 07: Prompt & Context Engineering Part B Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Prompt Chaining Architecture",
+          "markdown": "## Core Concept: Prompt Chaining Architecture\n### Prompt Chaining, ReAct Framework & Injection Red-Teaming\n\n### Technical Breakdown:\n- Breaking monolithic prompts into discrete, validated sequential stages.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Prompt Chaining Architecture. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: The ReAct Pattern Intuition",
+          "markdown": "## Core Concept: The ReAct Pattern Intuition\n### Prompt Chaining, ReAct Framework & Injection Red-Teaming\n\n### Technical Breakdown:\n- Interleaving Thought -> Action -> Observation cycles to solve complex problems.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into The ReAct Pattern Intuition. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Prompt Injections & Jailbreak Vectors",
+          "markdown": "## Core Concept: Prompt Injections & Jailbreak Vectors\n### Prompt Chaining, ReAct Framework & Injection Red-Teaming\n\n### Technical Breakdown:\n- Direct injections, indirect document injections, and jailbreak payloads.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Prompt Injections & Jailbreak Vectors. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Defensive Sanitization & Guardrails",
+          "markdown": "## Core Concept: Defensive Sanitization & Guardrails\n### Prompt Chaining, ReAct Framework & Injection Red-Teaming\n\n### Technical Breakdown:\n- Input sanitization layers, PII scrubbers, and dual-model evaluator architectures.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Defensive Sanitization & Guardrails. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Self-Consistency & Majority Voting",
+          "markdown": "## Core Concept: Self-Consistency & Majority Voting\n### Prompt Chaining, ReAct Framework & Injection Red-Teaming\n\n### Technical Breakdown:\n- Sampling multiple reasoning paths to reach robust consensus answers.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Self-Consistency & Majority Voting. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 07: Prompt & Context Engineering Part B",
+          "markdown": "## Annotated Code: Week 07: Prompt & Context Engineering Part B\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Red-team a simulated support agent in /studio and observe guardrail intervention.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Red-team a simulated support agent in /studio and observe guardrail intervention.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 07: Prompt & Context Engineering Part B\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 07: Prompt & Context Engineering Part B",
+          "markdown": "## Weekly Deliverable: Week 07: Prompt & Context Engineering Part B\n### Milestone 07 Specifications\n\n### Deliverable Requirements:\n- Construct a 3-stage prompt pipeline (Extract -> Validate -> Format) with automated injection test suites.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w07-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 07 Check-Out Quiz",
+          "markdown": "## Week 07 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-08",
+      "week_number": 8,
+      "title": "Week 08: Vector Databases & ANN Search",
+      "filename": "week-08-vector-databases-and-ann-search.md",
+      "html_path": "/slides-html/week-08-vector-databases-and-ann-search.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 08: Vector Databases & ANN Search",
+          "markdown": "## Week 08: Vector Databases & ANN Search\n### HNSW Graphs, IVF Voronoi, Product Quantization & pgvector\n\n**Part IV: Capstone & Production** \u2022 *CH06 Companion*\n\n### Learning Objectives:\n1. The Scalability Problem of Flat Search: $O(N \\cdot d)$ search complexity and why linear scans collapse beyond 100k vecto...\n2. HNSW: Hierarchical Navigable Small World: Skip-list graph indexing: logarithmic $O(\\log N)$ nearest neighbor discovery....\n3. IVF: Inverted File Indexing: Partitioning vector space into Voronoi centroids to restrict search space....\n4. Product Quantization (PQ): Compressing high-dimensional vectors into compact sub-vector codebooks....\n\n> *\"Vector database internals: why flat search fails at scale, graph-based HNSW traversal, IVF clustering, and deploying pgvector and Qdrant.\"*",
+          "notes": "Welcome cohort to Week 08: Vector Databases & ANN Search. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 08: Vector Databases & ANN Search Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: The Scalability Problem of Flat Search",
+          "markdown": "## Core Concept: The Scalability Problem of Flat Search\n### HNSW Graphs, IVF Voronoi, Product Quantization & pgvector\n\n### Technical Breakdown:\n- $O(N \\cdot d)$ search complexity and why linear scans collapse beyond 100k vectors.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into The Scalability Problem of Flat Search. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: HNSW: Hierarchical Navigable Small World",
+          "markdown": "## Core Concept: HNSW: Hierarchical Navigable Small World\n### HNSW Graphs, IVF Voronoi, Product Quantization & pgvector\n\n### Technical Breakdown:\n- Skip-list graph indexing: logarithmic $O(\\log N)$ nearest neighbor discovery.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into HNSW: Hierarchical Navigable Small World. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: IVF: Inverted File Indexing",
+          "markdown": "## Core Concept: IVF: Inverted File Indexing\n### HNSW Graphs, IVF Voronoi, Product Quantization & pgvector\n\n### Technical Breakdown:\n- Partitioning vector space into Voronoi centroids to restrict search space.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into IVF: Inverted File Indexing. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Product Quantization (PQ)",
+          "markdown": "## Core Concept: Product Quantization (PQ)\n### HNSW Graphs, IVF Voronoi, Product Quantization & pgvector\n\n### Technical Breakdown:\n- Compressing high-dimensional vectors into compact sub-vector codebooks.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Product Quantization (PQ). Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: pgvector & Qdrant in Production",
+          "markdown": "## Core Concept: pgvector & Qdrant in Production\n### HNSW Graphs, IVF Voronoi, Product Quantization & pgvector\n\n### Technical Breakdown:\n- Relational metadata filtering + vector ANN in a unified SQL or dedicated engine.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into pgvector & Qdrant in Production. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 08: Vector Databases & ANN Search",
+          "markdown": "## Annotated Code: Week 08: Vector Databases & ANN Search\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Tab 2: RAG Chunking & Retrieval Debugger \u2014 benchmark search latency across flat vs. indexed stores.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Tab 2: RAG Chunking & Retrieval Debugger \u2014 benchmark search latency across flat vs. indexed stores.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 08: Vector Databases & ANN Search\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 08: Vector Databases & ANN Search",
+          "markdown": "## Weekly Deliverable: Week 08: Vector Databases & ANN Search\n### Milestone 08 Specifications\n\n### Deliverable Requirements:\n- Deploy a local pgvector SQLite/Docker instance, index 10,000 synthetic embeddings, and measure recall vs. QPS.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w08-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 08 Check-Out Quiz",
+          "markdown": "## Week 08 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-09",
+      "week_number": 9,
+      "title": "Week 09: Data Engineering for AI Systems",
+      "filename": "week-09-data-engineering-for-ai.md",
+      "html_path": "/slides-html/week-09-data-engineering-for-ai.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 09: Data Engineering for AI Systems",
+          "markdown": "## Week 09: Data Engineering for AI Systems\n### ETL/ELT Pipelines, Document Parsing, Feature Stores & DVC\n\n**Part IV: Capstone & Production** \u2022 *CH07 Companion*\n\n### Learning Objectives:\n1. The AI Data Lifecycle: Ingestion, normalization, deduplication, chunking, embedding, and continuous ind...\n2. Unstructured Document Parsing: Handling multi-column PDFs, tables, markdown headers, and OCR noise....\n3. Deduplication & Content Hashing: MinHash and perceptual hashing to prevent indexing duplicate passages....\n4. Feature Stores for AI: Bridging online low-latency inference with offline historical model evaluation....\n\n> *\"Data pipelines for AI: document ingestion, PDF/OCR extraction, chunk deduplication, feature stores, and dataset versioning with DVC.\"*",
+          "notes": "Welcome cohort to Week 09: Data Engineering for AI Systems. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 09: Data Engineering for AI Systems Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: The AI Data Lifecycle",
+          "markdown": "## Core Concept: The AI Data Lifecycle\n### ETL/ELT Pipelines, Document Parsing, Feature Stores & DVC\n\n### Technical Breakdown:\n- Ingestion, normalization, deduplication, chunking, embedding, and continuous indexing.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into The AI Data Lifecycle. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: Unstructured Document Parsing",
+          "markdown": "## Core Concept: Unstructured Document Parsing\n### ETL/ELT Pipelines, Document Parsing, Feature Stores & DVC\n\n### Technical Breakdown:\n- Handling multi-column PDFs, tables, markdown headers, and OCR noise.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Unstructured Document Parsing. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Deduplication & Content Hashing",
+          "markdown": "## Core Concept: Deduplication & Content Hashing\n### ETL/ELT Pipelines, Document Parsing, Feature Stores & DVC\n\n### Technical Breakdown:\n- MinHash and perceptual hashing to prevent indexing duplicate passages.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Deduplication & Content Hashing. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Feature Stores for AI",
+          "markdown": "## Core Concept: Feature Stores for AI\n### ETL/ELT Pipelines, Document Parsing, Feature Stores & DVC\n\n### Technical Breakdown:\n- Bridging online low-latency inference with offline historical model evaluation.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Feature Stores for AI. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Data Versioning with DVC",
+          "markdown": "## Core Concept: Data Versioning with DVC\n### ETL/ELT Pipelines, Document Parsing, Feature Stores & DVC\n\n### Technical Breakdown:\n- Tracking large dataset hashes alongside Git commits for 100% reproducible experiments.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Data Versioning with DVC. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 09: Data Engineering for AI Systems",
+          "markdown": "## Annotated Code: Week 09: Data Engineering for AI Systems\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Run scripts/sync_notebooks_to_app.py to observe deterministic curriculum compilation.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Run scripts/sync_notebooks_to_app.py to observe deterministic curriculum compilation.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 09: Data Engineering for AI Systems\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 09: Data Engineering for AI Systems",
+          "markdown": "## Weekly Deliverable: Week 09: Data Engineering for AI Systems\n### Milestone 09 Specifications\n\n### Deliverable Requirements:\n- Build an idempotent document ingestion pipeline that extracts, normalizes, and hashes 20 PDF documents.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w09-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 09 Check-Out Quiz",
+          "markdown": "## Week 09 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-10",
+      "week_number": 10,
+      "title": "Week 10: Production RAG Systems Part A",
+      "filename": "week-10-production-rag-systems-part-a.md",
+      "html_path": "/slides-html/week-10-production-rag-systems-part-a.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 10: Production RAG Systems Part A",
+          "markdown": "## Week 10: Production RAG Systems Part A\n### Semantic Chunking, Hybrid BM25 Search & Cross-Encoder Reranking\n\n**Part IV: Capstone & Production** \u2022 *CH08 Companion*\n\n### Learning Objectives:\n1. Why Naive RAG Fails in Production: Chunk fragmentation, semantic drift, missing context, and retrieval hallucinatio...\n2. Chunking Strategies: Fixed sliding window vs. recursive markdown character vs. semantic boundary chun...\n3. Hybrid Retrieval Architecture: Combining sparse keyword precision (BM25) with dense semantic recall (HNSW)....\n4. Reciprocal Rank Fusion (RRF): Rank-based score normalization without calibrating score scales ($RRF = \\sum \\fr...\n\n> *\"Production RAG core: chunking strategies, combining dense semantic search with sparse BM25, Reciprocal Rank Fusion, and cross-encoder reranking.\"*",
+          "notes": "Welcome cohort to Week 10: Production RAG Systems Part A. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 10: Production RAG Systems Part A Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Why Naive RAG Fails in Production",
+          "markdown": "## Core Concept: Why Naive RAG Fails in Production\n### Semantic Chunking, Hybrid BM25 Search & Cross-Encoder Reranking\n\n### Technical Breakdown:\n- Chunk fragmentation, semantic drift, missing context, and retrieval hallucinations.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Why Naive RAG Fails in Production. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: Chunking Strategies",
+          "markdown": "## Core Concept: Chunking Strategies\n### Semantic Chunking, Hybrid BM25 Search & Cross-Encoder Reranking\n\n### Technical Breakdown:\n- Fixed sliding window vs. recursive markdown character vs. semantic boundary chunking.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Chunking Strategies. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Hybrid Retrieval Architecture",
+          "markdown": "## Core Concept: Hybrid Retrieval Architecture\n### Semantic Chunking, Hybrid BM25 Search & Cross-Encoder Reranking\n\n### Technical Breakdown:\n- Combining sparse keyword precision (BM25) with dense semantic recall (HNSW).\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Hybrid Retrieval Architecture. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Reciprocal Rank Fusion (RRF)",
+          "markdown": "## Core Concept: Reciprocal Rank Fusion (RRF)\n### Semantic Chunking, Hybrid BM25 Search & Cross-Encoder Reranking\n\n### Technical Breakdown:\n- Rank-based score normalization without calibrating score scales ($RRF = \\sum \\frac{1}{k + r_i}$).\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Reciprocal Rank Fusion (RRF). Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Cross-Encoder Reranking",
+          "markdown": "## Core Concept: Cross-Encoder Reranking\n### Semantic Chunking, Hybrid BM25 Search & Cross-Encoder Reranking\n\n### Technical Breakdown:\n- Joint query-passage attention scoring to isolate true needle-in-the-haystack passages.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Cross-Encoder Reranking. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 10: Production RAG Systems Part A",
+          "markdown": "## Annotated Code: Week 10: Production RAG Systems Part A\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Tab 2: RAG Chunking & Retrieval Debugger \u2014 adjust Alpha slider live to compare BM25 vs. Dense vs. Hybrid.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Tab 2: RAG Chunking & Retrieval Debugger \u2014 adjust Alpha slider live to compare BM25 vs. Dense vs. Hybrid.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 10: Production RAG Systems Part A\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 10: Production RAG Systems Part A",
+          "markdown": "## Weekly Deliverable: Week 10: Production RAG Systems Part A\n### Milestone 10 Specifications\n\n### Deliverable Requirements:\n- Implement a hybrid retriever with RRF and a cross-encoder reranking stage in ch08-production-rag-systems.ipynb.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w10-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 10 Check-Out Quiz",
+          "markdown": "## Week 10 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-11",
+      "week_number": 11,
+      "title": "Week 11: Production RAG Systems Part B",
+      "filename": "week-11-production-rag-systems-part-b.md",
+      "html_path": "/slides-html/week-11-production-rag-systems-part-b.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 11: Production RAG Systems Part B",
+          "markdown": "## Week 11: Production RAG Systems Part B\n### Multi-Hop RAG, GraphRAG, Inline Citations & Ragas Evals\n\n**Part IV: Capstone & Production** \u2022 *CH08 Companion*\n\n### Learning Objectives:\n1. Multi-Hop Query Decomposition: Splitting complex comparative questions into sub-queries for multi-step retrieva...\n2. GraphRAG Fundamentals: Extracting entity-relationship graphs to capture cross-document global themes....\n3. Inline Citations & Grounding: Guaranteed bracketed citations `[1][2]` tied strictly to retrieved source spans....\n4. The RAG Triad Evals: Context Precision, Faithfulness (groundedness), and Answer Relevance....\n\n> *\"Advanced RAG architectures: multi-hop query decomposition, Knowledge Graph RAG, strict bracketed citations, and automated Ragas evaluation.\"*",
+          "notes": "Welcome cohort to Week 11: Production RAG Systems Part B. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 11: Production RAG Systems Part B Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Multi-Hop Query Decomposition",
+          "markdown": "## Core Concept: Multi-Hop Query Decomposition\n### Multi-Hop RAG, GraphRAG, Inline Citations & Ragas Evals\n\n### Technical Breakdown:\n- Splitting complex comparative questions into sub-queries for multi-step retrieval.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Multi-Hop Query Decomposition. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: GraphRAG Fundamentals",
+          "markdown": "## Core Concept: GraphRAG Fundamentals\n### Multi-Hop RAG, GraphRAG, Inline Citations & Ragas Evals\n\n### Technical Breakdown:\n- Extracting entity-relationship graphs to capture cross-document global themes.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into GraphRAG Fundamentals. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Inline Citations & Grounding",
+          "markdown": "## Core Concept: Inline Citations & Grounding\n### Multi-Hop RAG, GraphRAG, Inline Citations & Ragas Evals\n\n### Technical Breakdown:\n- Guaranteed bracketed citations `[1][2]` tied strictly to retrieved source spans.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Inline Citations & Grounding. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: The RAG Triad Evals",
+          "markdown": "## Core Concept: The RAG Triad Evals\n### Multi-Hop RAG, GraphRAG, Inline Citations & Ragas Evals\n\n### Technical Breakdown:\n- Context Precision, Faithfulness (groundedness), and Answer Relevance.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into The RAG Triad Evals. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Ragas & DeepEval in CI/CD",
+          "markdown": "## Core Concept: Ragas & DeepEval in CI/CD\n### Multi-Hop RAG, GraphRAG, Inline Citations & Ragas Evals\n\n### Technical Breakdown:\n- Automated regression gates preventing bad chunking or prompt drift.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Ragas & DeepEval in CI/CD. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 11: Production RAG Systems Part B",
+          "markdown": "## Annotated Code: Week 11: Production RAG Systems Part B\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Inspect citation grounding and run automated RAG Triad benchmark on sample enterprise QA pairs.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Inspect citation grounding and run automated RAG Triad benchmark on sample enterprise QA pairs.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 11: Production RAG Systems Part B\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 11: Production RAG Systems Part B",
+          "markdown": "## Weekly Deliverable: Week 11: Production RAG Systems Part B\n### Milestone 11 Specifications\n\n### Deliverable Requirements:\n- Evaluate a RAG pipeline on 30 test questions using Ragas metrics and enforce >0.85 faithfulness threshold.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w11-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 11 Check-Out Quiz",
+          "markdown": "## Week 11 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-12",
+      "week_number": 12,
+      "title": "Week 12: Autonomous AI Agents",
+      "filename": "week-12-autonomous-ai-agents.md",
+      "html_path": "/slides-html/week-12-autonomous-ai-agents.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 12: Autonomous AI Agents",
+          "markdown": "## Week 12: Autonomous AI Agents\n### ReAct Loops, LangGraph State Machines, Memory & Human-in-the-Loop\n\n**Part IV: Capstone & Production** \u2022 *CH09 Companion*\n\n### Learning Objectives:\n1. Agent Anatomy: Think -> Act -> Observe: How agents reason over tools, execute actions, and incorporate real-world feedba...\n2. LangGraph Architecture: Cyclical state graphs, nodes, conditional edges, and state persistence....\n3. Memory Systems: Working scratchpad (in-context), short-term buffer, and long-term vector/SQL epi...\n4. Tool & Function Calling: Pydantic JSON schema declaration and structured tool dispatch....\n\n> *\"Agentic architectures: ReAct loop mechanics, cyclical state graphs with LangGraph, episodic/working memory, and human approval checkpoints.\"*",
+          "notes": "Welcome cohort to Week 12: Autonomous AI Agents. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 12: Autonomous AI Agents Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Agent Anatomy: Think -> Act -> Observe",
+          "markdown": "## Core Concept: Agent Anatomy: Think -> Act -> Observe\n### ReAct Loops, LangGraph State Machines, Memory & Human-in-the-Loop\n\n### Technical Breakdown:\n- How agents reason over tools, execute actions, and incorporate real-world feedback.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Agent Anatomy: Think -> Act -> Observe. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: LangGraph Architecture",
+          "markdown": "## Core Concept: LangGraph Architecture\n### ReAct Loops, LangGraph State Machines, Memory & Human-in-the-Loop\n\n### Technical Breakdown:\n- Cyclical state graphs, nodes, conditional edges, and state persistence.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into LangGraph Architecture. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Memory Systems",
+          "markdown": "## Core Concept: Memory Systems\n### ReAct Loops, LangGraph State Machines, Memory & Human-in-the-Loop\n\n### Technical Breakdown:\n- Working scratchpad (in-context), short-term buffer, and long-term vector/SQL episodic memory.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Memory Systems. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Tool & Function Calling",
+          "markdown": "## Core Concept: Tool & Function Calling\n### ReAct Loops, LangGraph State Machines, Memory & Human-in-the-Loop\n\n### Technical Breakdown:\n- Pydantic JSON schema declaration and structured tool dispatch.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Tool & Function Calling. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Human-in-the-Loop (HITL)",
+          "markdown": "## Core Concept: Human-in-the-Loop (HITL)\n### ReAct Loops, LangGraph State Machines, Memory & Human-in-the-Loop\n\n### Technical Breakdown:\n- Interrupting execution graph at sensitive nodes for human approval before write operations.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Human-in-the-Loop (HITL). Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 12: Autonomous AI Agents",
+          "markdown": "## Annotated Code: Week 12: Autonomous AI Agents\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Tab 3: LangGraph Agent Flow Visualizer \u2014 execute multi-step research agent and watch cyclical state updates.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Tab 3: LangGraph Agent Flow Visualizer \u2014 execute multi-step research agent and watch cyclical state updates.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 12: Autonomous AI Agents\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 12: Autonomous AI Agents",
+          "markdown": "## Weekly Deliverable: Week 12: Autonomous AI Agents\n### Milestone 12 Specifications\n\n### Deliverable Requirements:\n- Build an autonomous multi-step code execution agent using LangGraph with human confirmation checkpoint.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w12-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 12 Check-Out Quiz",
+          "markdown": "## Week 12 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-13",
+      "week_number": 13,
+      "title": "Week 13: Model Context Protocol (MCP)",
+      "filename": "week-13-model-context-protocol-mcp.md",
+      "html_path": "/slides-html/week-13-model-context-protocol-mcp.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 13: Model Context Protocol (MCP)",
+          "markdown": "## Week 13: Model Context Protocol (MCP)\n### The N\u00d7M Problem, JSON-RPC 2.0, Tools/Resources/Prompts & MCP Inspector\n\n**Part IV: Capstone & Production** \u2022 *CH10 Companion*\n\n### Learning Objectives:\n1. The $N \\times M$ Integration Crisis: Why every agent connecting to every API independently causes ecosystem fragmenta...\n2. MCP Architecture & Topology: Host Clients (Cursor, Claude Desktop), Client proxies, and standard MCP Servers....\n3. Core Primitives: Tools, Resources, Prompts: Executable functions (tools), readable schemas/data (resources), reusable prompt...\n4. JSON-RPC 2.0 Transport Layer: stdio pipes vs. Server-Sent Events (SSE) / Streamable HTTP....\n\n> *\"The Model Context Protocol: solving $N \\times M$ agent integration, JSON-RPC 2.0 specification, building MCP Servers with official SDKs, and security.\"*",
+          "notes": "Welcome cohort to Week 13: Model Context Protocol (MCP). Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 13: Model Context Protocol (MCP) Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: The $N \\times M$ Integration Crisis",
+          "markdown": "## Core Concept: The $N \\times M$ Integration Crisis\n### The N\u00d7M Problem, JSON-RPC 2.0, Tools/Resources/Prompts & MCP Inspector\n\n### Technical Breakdown:\n- Why every agent connecting to every API independently causes ecosystem fragmentation.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into The $N \\times M$ Integration Crisis. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: MCP Architecture & Topology",
+          "markdown": "## Core Concept: MCP Architecture & Topology\n### The N\u00d7M Problem, JSON-RPC 2.0, Tools/Resources/Prompts & MCP Inspector\n\n### Technical Breakdown:\n- Host Clients (Cursor, Claude Desktop), Client proxies, and standard MCP Servers.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into MCP Architecture & Topology. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Core Primitives: Tools, Resources, Prompts",
+          "markdown": "## Core Concept: Core Primitives: Tools, Resources, Prompts\n### The N\u00d7M Problem, JSON-RPC 2.0, Tools/Resources/Prompts & MCP Inspector\n\n### Technical Breakdown:\n- Executable functions (tools), readable schemas/data (resources), reusable prompt templates.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Core Primitives: Tools, Resources, Prompts. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: JSON-RPC 2.0 Transport Layer",
+          "markdown": "## Core Concept: JSON-RPC 2.0 Transport Layer\n### The N\u00d7M Problem, JSON-RPC 2.0, Tools/Resources/Prompts & MCP Inspector\n\n### Technical Breakdown:\n- stdio pipes vs. Server-Sent Events (SSE) / Streamable HTTP.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into JSON-RPC 2.0 Transport Layer. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: MCP Security & Prompt Injections",
+          "markdown": "## Core Concept: MCP Security & Prompt Injections\n### The N\u00d7M Problem, JSON-RPC 2.0, Tools/Resources/Prompts & MCP Inspector\n\n### Technical Breakdown:\n- Tool permission models, argument validation, and preventing tool-based data exfiltration.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into MCP Security & Prompt Injections. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 13: Model Context Protocol (MCP)",
+          "markdown": "## Annotated Code: Week 13: Model Context Protocol (MCP)\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Tab 4: Live MCP Tool & JSON-RPC Inspector \u2014 send live initialize, tools/list, and tools/call packets.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Tab 4: Live MCP Tool & JSON-RPC Inspector \u2014 send live initialize, tools/list, and tools/call packets.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 13: Model Context Protocol (MCP)\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 13: Model Context Protocol (MCP)",
+          "markdown": "## Weekly Deliverable: Week 13: Model Context Protocol (MCP)\n### Milestone 13 Specifications\n\n### Deliverable Requirements:\n- Implement and test an enterprise MCP Server exposing custom calculation and database tools.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w13-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 13 Check-Out Quiz",
+          "markdown": "## Week 13 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-14",
+      "week_number": 14,
+      "title": "Week 14: Production Systems & MLOps",
+      "filename": "week-14-production-systems-and-mlops.md",
+      "html_path": "/slides-html/week-14-production-systems-and-mlops.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 14: Production Systems & MLOps",
+          "markdown": "## Week 14: Production Systems & MLOps\n### Redis Semantic Cache, FastAPI/vLLM, Docker Compose & Prometheus\n\n**Part IV: Capstone & Production** \u2022 *CH11 Companion*\n\n### Learning Objectives:\n1. Production System Architecture: Edge routing, API gateways, cache layers, worker pools, and persistent storage....\n2. Semantic Caching with Redis: Exact hash lookup (<1ms) + semantic cosine distance lookup (<15ms) to save 60% L...\n3. Asynchronous Job Queues (Celery/Redis): Offloading long-running document ingestion and agent tasks from HTTP workers....\n4. High-Throughput Model Serving: Continuous batching and PagedAttention with vLLM and Ollama....\n\n> *\"Production AI engineering: semantic caching, asynchronous queues with Celery, high-throughput model serving with vLLM, Docker Compose, and CI/CD.\"*",
+          "notes": "Welcome cohort to Week 14: Production Systems & MLOps. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 14: Production Systems & MLOps Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Production System Architecture",
+          "markdown": "## Core Concept: Production System Architecture\n### Redis Semantic Cache, FastAPI/vLLM, Docker Compose & Prometheus\n\n### Technical Breakdown:\n- Edge routing, API gateways, cache layers, worker pools, and persistent storage.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Production System Architecture. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: Semantic Caching with Redis",
+          "markdown": "## Core Concept: Semantic Caching with Redis\n### Redis Semantic Cache, FastAPI/vLLM, Docker Compose & Prometheus\n\n### Technical Breakdown:\n- Exact hash lookup (<1ms) + semantic cosine distance lookup (<15ms) to save 60% LLM cost.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Semantic Caching with Redis. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Asynchronous Job Queues (Celery/Redis)",
+          "markdown": "## Core Concept: Asynchronous Job Queues (Celery/Redis)\n### Redis Semantic Cache, FastAPI/vLLM, Docker Compose & Prometheus\n\n### Technical Breakdown:\n- Offloading long-running document ingestion and agent tasks from HTTP workers.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Asynchronous Job Queues (Celery/Redis). Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: High-Throughput Model Serving",
+          "markdown": "## Core Concept: High-Throughput Model Serving\n### Redis Semantic Cache, FastAPI/vLLM, Docker Compose & Prometheus\n\n### Technical Breakdown:\n- Continuous batching and PagedAttention with vLLM and Ollama.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into High-Throughput Model Serving. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Docker Compose & CI/CD Pipelines",
+          "markdown": "## Core Concept: Docker Compose & CI/CD Pipelines\n### Redis Semantic Cache, FastAPI/vLLM, Docker Compose & Prometheus\n\n### Technical Breakdown:\n- Containerizing full-stack AI services and testing in GitHub Actions.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Docker Compose & CI/CD Pipelines. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 14: Production Systems & MLOps",
+          "markdown": "## Annotated Code: Week 14: Production Systems & MLOps\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Observe cache hit rates in /api/cache/stats and simulate concurrent load with k6/curl.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Observe cache hit rates in /api/cache/stats and simulate concurrent load with k6/curl.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 14: Production Systems & MLOps\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 14: Production Systems & MLOps",
+          "markdown": "## Weekly Deliverable: Week 14: Production Systems & MLOps\n### Milestone 14 Specifications\n\n### Deliverable Requirements:\n- Deploy the full multi-container docker-compose.yml stack and pass all automated health probes.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w14-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 14 Check-Out Quiz",
+          "markdown": "## Week 14 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-15",
+      "week_number": 15,
+      "title": "Week 15: Evals, Safety & Capstone Sprint",
+      "filename": "week-15-evals-safety-and-capstone-sprint.md",
+      "html_path": "/slides-html/week-15-evals-safety-and-capstone-sprint.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 15: Evals, Safety & Capstone Sprint",
+          "markdown": "## Week 15: Evals, Safety & Capstone Sprint\n### DeepEval, OpenTelemetry Traces, PII Redaction & Architecture Review\n\n**Part IV: Capstone & Production** \u2022 *CH12 Companion*\n\n### Learning Objectives:\n1. Distributed Tracing with OpenTelemetry: Tracing requests across client -> gateway -> cache -> vector DB -> LLM span....\n2. Automated Evals with DeepEval: Unit testing LLM outputs for hallucinations, toxicity, and compliance in CI/CD....\n3. PII Redaction & Compliance: Scrubbing credit card numbers, SSNs, and personal data before sending prompts to...\n4. Guardrails in Production: Input guardrails (jailbreak prevention) and output guardrails (hallucination sup...\n\n> *\"Evaluations and safety: OpenTelemetry distributed tracing, PII scrubbing, prompt guardrails, and final architecture review for the Capstone defense.\"*",
+          "notes": "Welcome cohort to Week 15: Evals, Safety & Capstone Sprint. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 15: Evals, Safety & Capstone Sprint Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: Distributed Tracing with OpenTelemetry",
+          "markdown": "## Core Concept: Distributed Tracing with OpenTelemetry\n### DeepEval, OpenTelemetry Traces, PII Redaction & Architecture Review\n\n### Technical Breakdown:\n- Tracing requests across client -> gateway -> cache -> vector DB -> LLM span.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Distributed Tracing with OpenTelemetry. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: Automated Evals with DeepEval",
+          "markdown": "## Core Concept: Automated Evals with DeepEval\n### DeepEval, OpenTelemetry Traces, PII Redaction & Architecture Review\n\n### Technical Breakdown:\n- Unit testing LLM outputs for hallucinations, toxicity, and compliance in CI/CD.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Automated Evals with DeepEval. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: PII Redaction & Compliance",
+          "markdown": "## Core Concept: PII Redaction & Compliance\n### DeepEval, OpenTelemetry Traces, PII Redaction & Architecture Review\n\n### Technical Breakdown:\n- Scrubbing credit card numbers, SSNs, and personal data before sending prompts to models.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into PII Redaction & Compliance. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: Guardrails in Production",
+          "markdown": "## Core Concept: Guardrails in Production\n### DeepEval, OpenTelemetry Traces, PII Redaction & Architecture Review\n\n### Technical Breakdown:\n- Input guardrails (jailbreak prevention) and output guardrails (hallucination suppression).\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Guardrails in Production. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Capstone Architecture Review",
+          "markdown": "## Core Concept: Capstone Architecture Review\n### DeepEval, OpenTelemetry Traces, PII Redaction & Architecture Review\n\n### Technical Breakdown:\n- Pre-flight inspection against the 100-Point Capstone Grading Rubric.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Capstone Architecture Review. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 15: Evals, Safety & Capstone Sprint",
+          "markdown": "## Annotated Code: Week 15: Evals, Safety & Capstone Sprint\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Inspect live OpenTelemetry trace waterfall showing latency breakdown across retrieval, cache, and LLM.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Inspect live OpenTelemetry trace waterfall showing latency breakdown across retrieval, cache, and LLM.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 15: Evals, Safety & Capstone Sprint\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 15: Evals, Safety & Capstone Sprint",
+          "markdown": "## Weekly Deliverable: Week 15: Evals, Safety & Capstone Sprint\n### Milestone 15 Specifications\n\n### Deliverable Requirements:\n- Implement automated safety guardrails and run DeepEval test suite across 20 adversarial test cases.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w15-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 15 Check-Out Quiz",
+          "markdown": "## Week 15 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    },
+    {
+      "id": "week-16",
+      "week_number": 16,
+      "title": "Week 16: Capstone Demo Day & Graduation",
+      "filename": "week-16-capstone-demo-day.md",
+      "html_path": "/slides-html/week-16-capstone-demo-day.html",
+      "slide_count": 12,
+      "slides": [
+        {
+          "slide_number": 1,
+          "title": "Week 16: Capstone Demo Day & Graduation",
+          "markdown": "## Week 16: Capstone Demo Day & Graduation\n### 100-Point Rubric Walkthrough, Live Defense Format & Alumni Next Steps\n\n**Part IV: Capstone & Production** \u2022 *CAPSTONE Companion*\n\n### Learning Objectives:\n1. The 100-Point Capstone Rubric: Detailed scoring across Architecture (20), MCP/Agents (20), RAG (20), Production...\n2. Live Defense Protocol: 10-minute system architecture demo + 5-minute live code walkthrough + 5-minute Q...\n3. Common Defense Failure Points: Missing fallbacks, brittle prompt engineering, untested edge cases, and lack of ...\n4. From Student to AI Engineer: Publishing open-source repositories, portfolio presentation, and navigating AI e...\n\n> *\"Cohort graduation and Capstone Defense: presenting production AI systems evaluated against the 100-point rubric, live grading, and career transition.\"*",
+          "notes": "Welcome cohort to Week 16: Capstone Demo Day & Graduation. Emphasize production rigor and end-to-end integration.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 2,
+          "title": "System Architecture & Mental Model",
+          "markdown": "## System Architecture & Mental Model\n### Week 16: Capstone Demo Day & Graduation Architectural Overview\n\n```\n+--------------------------------------------------------------+\n|                       Client Gateway                         |\n+------------------------------+-------------------------------+\n                               |\n+------------------------------v-------------------------------+\n|                   Core Orchestration Engine                  |\n|        (FastAPI / LangGraph / Model Context Protocol)        |\n+--------------+-------------------------------+---------------+\n               |                               |\n+--------------v---------------+ +-------------v---------------+\n|  Hybrid Storage & Search     | |  Inference & Safety Engine  |\n|  (pgvector / Redis / Qdrant) | |  (Ollama / Guardrails / OTel)|\n+------------------------------+ +-----------------------------+\n```\n- Decoupled, asynchronous, resilient system design.",
+          "notes": "Walk through the core components and their data flows.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 3,
+          "title": "Core Concept: The 100-Point Capstone Rubric",
+          "markdown": "## Core Concept: The 100-Point Capstone Rubric\n### 100-Point Rubric Walkthrough, Live Defense Format & Alumni Next Steps\n\n### Technical Breakdown:\n- Detailed scoring across Architecture (20), MCP/Agents (20), RAG (20), Production (20), Safety (20).\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into The 100-Point Capstone Rubric. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 4,
+          "title": "Core Concept: Live Defense Protocol",
+          "markdown": "## Core Concept: Live Defense Protocol\n### 100-Point Rubric Walkthrough, Live Defense Format & Alumni Next Steps\n\n### Technical Breakdown:\n- 10-minute system architecture demo + 5-minute live code walkthrough + 5-minute Q&A defense.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Live Defense Protocol. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 5,
+          "title": "Core Concept: Common Defense Failure Points",
+          "markdown": "## Core Concept: Common Defense Failure Points\n### 100-Point Rubric Walkthrough, Live Defense Format & Alumni Next Steps\n\n### Technical Breakdown:\n- Missing fallbacks, brittle prompt engineering, untested edge cases, and lack of metrics.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Common Defense Failure Points. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 6,
+          "title": "Core Concept: From Student to AI Engineer",
+          "markdown": "## Core Concept: From Student to AI Engineer\n### 100-Point Rubric Walkthrough, Live Defense Format & Alumni Next Steps\n\n### Technical Breakdown:\n- Publishing open-source repositories, portfolio presentation, and navigating AI engineering interviews.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into From Student to AI Engineer. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 7,
+          "title": "Core Concept: Alumni Community & Continuous Learning",
+          "markdown": "## Core Concept: Alumni Community & Continuous Learning\n### 100-Point Rubric Walkthrough, Live Defense Format & Alumni Next Steps\n\n### Technical Breakdown:\n- Staying current as foundation models and protocol standards evolve in 2026 and beyond.\n\n### Architectural Implications:\n- Enables high reliability and deterministic execution.\n- Protects downstream systems from latency spikes and malformed outputs.\n- Standardizes interfaces across team boundaries.\n\n```python\n# Architectural invariant\nassert latency_ms < 50, 'Sub-50ms service requirement violated'\n```",
+          "notes": "Deep-dive into Alumni Community & Continuous Learning. Highlight trade-offs between latency, cost, and accuracy.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 8,
+          "title": "Annotated Code: Week 16: Capstone Demo Day & Graduation",
+          "markdown": "## Annotated Code: Week 16: Capstone Demo Day & Graduation\n### Production Implementation Pattern\n\n```python\nfrom typing import Dict, Any, List\nimport asyncio\n\nclass ProductionEngine:\n    def __init__(self, config: Dict[str, Any]):\n        self.config = config\n        self.is_ready = True\n        \n    async def execute_task(self, payload: Dict[str, Any]) -> Dict[str, Any]:\n        \"\"\"Executes production workflow with error handling and fallback.\"\"\"\n        try:\n            # High-reliability non-blocking execution\n            result = await self._run_core_logic(payload)\n            return {'status': 'success', 'data': result}\n        except Exception as e:\n            return {'status': 'fallback', 'error': str(e)}\n```",
+          "notes": "Explain defensive error handling and why silent fallbacks are crucial in user-facing systems.",
+          "has_code": true,
+          "has_demo": false
+        },
+        {
+          "slide_number": 9,
+          "title": "Live Demo Cue: Studio Execution",
+          "markdown": "## Live Demo Cue: Studio Execution\n### Instructor Step-by-Step Walkthrough\n\n### Live Demonstration:\n1. Open `http://localhost:3000/studio`.\n2. Navigate to: Walk through the live Rubric Explorer on /enroll and present a model Capstone defense project.\n3. Run baseline scenario and observe real-time telemetry.\n4. Introduce deliberate edge-case error and demonstrate recovery mechanism.",
+          "notes": "Execute live demo: Walk through the live Rubric Explorer on /enroll and present a model Capstone defense project.",
+          "has_code": false,
+          "has_demo": true
+        },
+        {
+          "slide_number": 10,
+          "title": "Common Pitfalls & Production Failures",
+          "markdown": "## Common Pitfalls & Production Failures\n### Failure Modes in Week 16: Capstone Demo Day & Graduation\n\n### Top 3 Production Failure Modes:\n1. **Unmonitored Latency Drift:** Long-tail queries degrading P99 latency without triggering alerts.\n2. **Missing Fallbacks:** Hard crashes when external dependencies experience momentary blips.\n3. **Evaluation Blind Spots:** Relying on human vibes instead of automated quantitative metrics.",
+          "notes": "Highlight how easily untested assumptions turn into midnight production outages.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 11,
+          "title": "Weekly Deliverable: Week 16: Capstone Demo Day & Graduation",
+          "markdown": "## Weekly Deliverable: Week 16: Capstone Demo Day & Graduation\n### Milestone 16 Specifications\n\n### Deliverable Requirements:\n- Deliver live 15-minute Capstone defense, achieve 80+/100 score, and earn Cohort Certification.\n- Unit tests passing cleanly in `pytest`.\n- Verified against zero Docker and zero paid API dependencies.\n- Push code to your branch `feat/w16-deliverable`.",
+          "notes": "Emphasize the definition of done and automated test verification.",
+          "has_code": false,
+          "has_demo": false
+        },
+        {
+          "slide_number": 12,
+          "title": "Week 16 Check-Out Quiz",
+          "markdown": "## Week 16 Check-Out Quiz\n### Review & Consolidation\n\n### Knowledge Check:\n1. **What is the primary architectural invariant for this system?**\n   - *Answer:* Decoupled components with explicit contracts and resilient fallbacks.\n2. **How does this week's milestone feed into the final 100-point Capstone?**\n   - *Answer:* Directly satisfies one of the 5 core grading rubric dimensions.\n3. **Where can students access the runnable notebook and study guides?**\n   - *Answer:* In `book/chapters/` and `study-guides/` for Google NotebookLM.",
+          "notes": "Wrap up the lecture and open the floor for student Q&A.",
+          "has_code": false,
+          "has_demo": false
+        }
+      ]
+    }
+  ]
+}
