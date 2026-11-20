@@ -1,4 +1,6 @@
 import json
+import re
+import uuid
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -7,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from .config import settings
-from .db import init_db, ProgressRepository, VectorRepository
+from .db import init_db, ProgressRepository, VectorRepository, CohortEnrollmentRepository
 from .cache import semantic_cache
 from .llm_service import query_llm, stream_llm
 from .mcp_server import mcp_server
@@ -70,6 +72,14 @@ class HybridSearchRequest(BaseModel):
 class AgentTraceRequest(BaseModel):
     task: str
     pattern: str = "orchestrator_worker"
+
+class EnrollmentRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=100)
+    email: str = Field(..., min_length=5, max_length=150)
+    github_username: Optional[str] = Field(None, max_length=100)
+    experience_level: str = Field("intermediate", description="beginner, intermediate, or advanced")
+    track: str = Field("live_cohort", description="live_cohort or self_paced")
+    goal: Optional[str] = Field(None, max_length=1000)
 
 # --- Endpoints ---
 
@@ -190,3 +200,56 @@ async def mcp_inspect(request: Request):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON-RPC payload")
     return mcp_server.dispatch(rpc_body)
+
+# --- Cohort Enrollment Endpoints ---
+
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+@app.get("/api/enroll/stats")
+async def get_enrollment_stats():
+    """Returns live cohort seat counts and enrollment statistics."""
+    return CohortEnrollmentRepository.get_stats()
+
+@app.post("/api/enroll")
+async def enroll_student(req: EnrollmentRequest):
+    """Enrolls a student in the cohort, preventing duplicate signups and issuing a ticket ID."""
+    clean_email = req.email.strip().lower()
+    
+    # 1. Validate email format
+    if not EMAIL_REGEX.match(clean_email):
+        raise HTTPException(status_code=422, detail="Invalid email address format.")
+    
+    # 2. Prevent duplicate signups cleanly
+    existing = CohortEnrollmentRepository.get_by_email(clean_email)
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Email '{clean_email}' is already enrolled with Ticket ID {existing['id']}."
+        )
+    
+    # 3. Generate unique Ticket ID
+    ticket_id = f"AIENG-{uuid.uuid4().hex[:8].upper()}"
+    
+    # 4. Save enrollment
+    record = CohortEnrollmentRepository.create_enrollment(
+        enrollment_id=ticket_id,
+        full_name=req.full_name,
+        email=clean_email,
+        github_username=req.github_username,
+        experience_level=req.experience_level,
+        track=req.track,
+        goal=req.goal
+    )
+    
+    return {
+        "status": "confirmed",
+        "ticket_id": ticket_id,
+        "message": f"Welcome aboard, {req.full_name}! Your enrollment in the AI Engineering Cohort is confirmed.",
+        "enrollment": record,
+        "onboarding_steps": [
+            "1. Launch Chapter 00 (Builder Launchpad) to verify your local Python 3.11+ environment.",
+            "2. Install Ollama and pull local models: 'ollama pull llama3.2:3b' and 'ollama pull qwen2.5:7b'.",
+            "3. Explore Split-Screen Studio at /studio to test tokenizer and hybrid retrieval labs.",
+            "4. Ingest study-guides/ into Google NotebookLM for audio podcast overviews."
+        ]
+    }

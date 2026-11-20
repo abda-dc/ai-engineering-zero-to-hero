@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sparkles, BookOpen, Layers, Terminal, Github, CheckCircle2 } from 'lucide-react';
+import { Sparkles, BookOpen, Layers, Terminal, Github, CheckCircle2, GraduationCap } from 'lucide-react';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -26,6 +26,7 @@ export default function Navbar() {
     { name: 'Mastery Dashboard', href: '/', icon: Layers },
     { name: 'Chapters', href: '/chapters/ch00', icon: BookOpen },
     { name: 'AI Engineering Studio', href: '/studio', icon: Terminal },
+    { name: 'Cohort & Syllabus', href: '/enroll', icon: GraduationCap },
   ];
 
   const progressPct = Math.round((completedCount / 13) * 100);
@@ -72,8 +73,16 @@ export default function Navbar() {
         </nav>
 
         {/* Right Actions: Progress & GitHub */}
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/enroll"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-indigo-600 hover:from-emerald-600 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Enroll / Cohort</span>
+          </Link>
+
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span className="text-xs font-medium text-slate-300">
               {completedCount}/13 Done ({progressPct}%)

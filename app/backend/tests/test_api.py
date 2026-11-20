@@ -111,3 +111,52 @@ def test_mcp_inspector():
     assert call_res.status_code == 200
     call_data = call_res.json()
     assert "content" in call_data["result"]
+
+def test_enrollment_stats():
+    res = client.get("/api/enroll/stats")
+    assert res.status_code == 200
+    data = res.json()
+    assert "total_enrolled" in data
+    assert "seats_remaining" in data
+    assert "total_live_seats" in data
+    assert data["total_live_seats"] == 60
+
+def test_enrollment_flow_and_duplicate_prevention():
+    test_email = "alex.turner.test@example.com"
+    
+    # 1. Valid enrollment
+    res1 = client.post("/api/enroll", json={
+        "full_name": "Alex Turner",
+        "email": test_email,
+        "github_username": "alexturner",
+        "experience_level": "intermediate",
+        "track": "live_cohort",
+        "goal": "Master production RAG and MCP server development"
+    })
+    assert res1.status_code == 200
+    data1 = res1.json()
+    assert data1["status"] == "confirmed"
+    assert "ticket_id" in data1
+    assert data1["ticket_id"].startswith("AIENG-")
+    assert len(data1["onboarding_steps"]) >= 4
+
+    # 2. Duplicate enrollment attempt with same email
+    res2 = client.post("/api/enroll", json={
+        "full_name": "Alex Turner",
+        "email": test_email,
+        "github_username": "alexturner",
+        "experience_level": "intermediate",
+        "track": "live_cohort"
+    })
+    assert res2.status_code == 409
+    assert "already enrolled" in res2.json()["detail"]
+
+def test_enrollment_invalid_email():
+    res = client.post("/api/enroll", json={
+        "full_name": "Bad Email User",
+        "email": "not-an-email",
+        "experience_level": "beginner",
+        "track": "self_paced"
+    })
+    assert res.status_code == 422
+

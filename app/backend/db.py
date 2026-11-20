@@ -34,6 +34,21 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # Table: cohort_enrollments
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS cohort_enrollments (
+                id TEXT PRIMARY KEY,
+                full_name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                github_username TEXT,
+                experience_level TEXT NOT NULL,
+                track TEXT NOT NULL DEFAULT 'live_cohort',
+                goal TEXT,
+                status TEXT NOT NULL DEFAULT 'confirmed',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         
         conn.commit()
 
@@ -121,3 +136,70 @@ class VectorRepository:
                 }
                 for row in cursor.fetchall()
             ]
+
+class CohortEnrollmentRepository:
+    TOTAL_SEATS = 60
+
+    @staticmethod
+    def get_by_email(email: str) -> Optional[Dict[str, Any]]:
+        with sqlite3.connect(str(settings.SQLITE_DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM cohort_enrollments WHERE LOWER(email) = LOWER(?)", (email.strip(),))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return dict(row)
+
+    @staticmethod
+    def create_enrollment(
+        enrollment_id: str,
+        full_name: str,
+        email: str,
+        github_username: Optional[str],
+        experience_level: str,
+        track: str = "live_cohort",
+        goal: Optional[str] = None
+    ) -> Dict[str, Any]:
+        with sqlite3.connect(str(settings.SQLITE_DB_PATH)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO cohort_enrollments (id, full_name, email, github_username, experience_level, track, goal, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed', CURRENT_TIMESTAMP)
+            """, (
+                enrollment_id,
+                full_name.strip(),
+                email.strip().lower(),
+                (github_username or "").strip(),
+                experience_level,
+                track,
+                (goal or "").strip()
+            ))
+            conn.commit()
+            return CohortEnrollmentRepository.get_by_email(email)
+
+    @staticmethod
+    def get_stats() -> Dict[str, Any]:
+        with sqlite3.connect(str(settings.SQLITE_DB_PATH)) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM cohort_enrollments")
+            total = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM cohort_enrollments WHERE track = 'live_cohort'")
+            live_count = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM cohort_enrollments WHERE track = 'self_paced'")
+            self_paced_count = cursor.fetchone()[0]
+
+            seats_left = max(0, CohortEnrollmentRepository.TOTAL_SEATS - live_count)
+
+            return {
+                "total_enrolled": total,
+                "live_cohort_enrolled": live_count,
+                "self_paced_enrolled": self_paced_count,
+                "total_live_seats": CohortEnrollmentRepository.TOTAL_SEATS,
+                "seats_remaining": seats_left,
+                "is_cohort_open": seats_left > 0,
+                "next_cohort_start": "2026-12-01",
+                "curriculum_version": "2.0-fullstack"
+            }

@@ -81,7 +81,7 @@ async def query_llm(prompt: str, model: str = None) -> Dict[str, Any]:
     is_live = await check_ollama_available()
     if is_live:
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=35.0) as client:
                 res = await client.post(
                     f"{settings.OLLAMA_BASE_URL}/api/generate",
                     json={"model": target_model, "prompt": prompt, "stream": False}

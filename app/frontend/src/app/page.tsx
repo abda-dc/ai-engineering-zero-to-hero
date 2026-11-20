@@ -5,7 +5,7 @@ import Link from 'next/link';
 import curriculumData from '@/data/curriculum.json';
 import { 
   Sparkles, BookOpen, Layers, Terminal, CheckCircle2, ArrowRight, 
-  Search, Code2, Cpu, Database, Bot, ShieldCheck, Flame, Compass
+  Search, Code2, Cpu, Database, Bot, ShieldCheck, Flame, Compass, GraduationCap
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -77,6 +77,14 @@ export default function DashboardPage() {
             >
               <Terminal className="w-4 h-4 text-emerald-400" />
               Launch Split-Screen Studio
+            </Link>
+
+            <Link
+              href="/enroll"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium shadow-lg shadow-indigo-500/25 transition-all group"
+            >
+              <GraduationCap className="w-4 h-4 text-white" />
+              16-Week Cohort / Enroll
             </Link>
           </div>
         </div>
