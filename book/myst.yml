@@ -1,0 +1,32 @@
+version: 1
+project:
+  title: "AI Engineering: Zero to Hero"
+  description: "The Definitive Full-Stack Curriculum & Hands-on Guide for Modern AI Systems"
+  authors:
+    - name: "AI Engineering Team"
+  github: "https://github.com/abda-dc/ai-engineering-zero-to-hero"
+  toc:
+    - file: intro.md
+    - title: "Part I: Foundations"
+      children:
+        - file: chapters/part1-foundations/ch00-builder-launchpad.ipynb
+        - file: chapters/part1-foundations/ch01-math-and-stats-intuition.ipynb
+        - file: chapters/part1-foundations/ch02-classical-ml-bridge.ipynb
+    - title: "Part II: Core Generative AI & LLMs"
+      children:
+        - file: chapters/part2-core-genai/ch03-generative-ai-foundations.ipynb
+        - file: chapters/part2-core-genai/ch04-inside-large-language-models.ipynb
+        - file: chapters/part2-core-genai/ch05-prompt-and-context-engineering.ipynb
+    - title: "Part III: Vector DBs, Data & Production RAG"
+      children:
+        - file: chapters/part3-rag-data/ch06-vector-databases-and-search.ipynb
+        - file: chapters/part3-rag-data/ch07-data-engineering-for-ai.ipynb
+        - file: chapters/part3-rag-data/ch08-production-rag-systems.ipynb
+    - title: "Part IV: Autonomous Agents, MCP & Production MLOps"
+      children:
+        - file: chapters/part4-agents-prod/ch09-autonomous-ai-agents.ipynb
+        - file: chapters/part4-agents-prod/ch10-model-context-protocol-mcp.ipynb
+        - file: chapters/part4-agents-prod/ch11-production-systems-and-mlops.ipynb
+        - file: chapters/part4-agents-prod/ch12-evals-observability-and-safety.ipynb
+site:
+  template: book-theme
