@@ -7,12 +7,15 @@ Generates the 13 complete, runnable Jupyter Book 2 notebooks covering all 140 co
 import json
 from pathlib import Path
 
-def create_notebook(title: str, chapter_id: str, part: str, concepts: list, sections: list, capstone: dict, quiz: list) -> dict:
+def create_notebook(title: str, chapter_id: str, part: str, concepts: list, sections: list, capstone: dict, quiz: list, relative_file: str = "") -> dict:
     cells = []
     
     # Title & Metadata cell
     concepts_list_md = "\n".join([f"- **{c}**" for c in concepts])
+    colab_url = f"https://colab.research.google.com/github/abda-dc/ai-engineering-zero-to-hero/blob/main/book/chapters/{relative_file}"
     header_md = f"""# {title}
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]({colab_url})
 
 **Part:** {part}  
 **Chapter Identifier:** `{chapter_id}`  
@@ -2313,7 +2316,8 @@ def main():
             concepts=ch["concepts"],
             sections=ch["sections"],
             capstone=ch["capstone"],
-            quiz=ch["quiz"]
+            quiz=ch["quiz"],
+            relative_file=ch["file"]
         )
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(nb, f, indent=2)

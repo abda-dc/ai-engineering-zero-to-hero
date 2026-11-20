@@ -166,18 +166,30 @@ export default function ChapterReaderPage() {
               {currentChapter.id.toUpperCase()} • {currentChapter.partTitle}
             </span>
 
-            <button
-              onClick={markChapterCompleted}
-              disabled={isSaving}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                isCompleted
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-              }`}
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              {isCompleted ? 'Completed' : 'Mark Complete'}
-            </button>
+            <div className="flex items-center gap-2">
+              <a
+                href={`https://colab.research.google.com/github/abda-dc/ai-engineering-zero-to-hero/blob/main/book/${currentChapter.relative_path}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
+                title="Launch this chapter in Google Colab"
+              >
+                <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" className="h-4" />
+              </a>
+
+              <button
+                onClick={markChapterCompleted}
+                disabled={isSaving}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  isCompleted
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {isCompleted ? 'Completed' : 'Mark Complete'}
+              </button>
+            </div>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
